@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Krishna Automotives — Daily Plan</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Left Sidebar (Matches Floorline Figma Layout) -->
+    <aside class="sidebar">
+      <div class="brand-box">
+        <div class="brand-logo">KA</div>
+        <div>
+          <div class="brand-title">KRISHNA AUTOMOTIVES</div>
+          <div class="brand-sub">DAILY PLAN OS • UNIT 01</div>
+        </div>
+      </div>
+
+      <div class="nav-label">WORKSPACE</div>
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="daily-plan">
+          <span>📋 Daily Plan</span>
+        </button>
+        <button class="nav-item" data-tab="drawing-library">
+          <span>📐 Drawing Library</span>
+        </button>
+        <button class="nav-item" data-tab="production">
+          <span>⚙️ Production Entry</span>
+          <span class="sup-tag">SUP</span>
+        </button>
+        <button class="nav-item" data-tab="quality-checks">
+          <span>✅ Quality Checks</span>
+          <span class="badge" id="qc-badge">0</span>
+        </button>
+        <button class="nav-item" data-tab="dispatch">
+          <span>🚚 Dispatch & Handover</span>
+          <span class="sup-tag">SUP</span>
+        </button>
+      </nav>
+
+      <!-- Role Switcher Card -->
+      <div class="role-card">
+        <div class="role-status" id="role-status-text">👁️ Worker View (Read-Only)</div>
+        <p class="role-desc" id="role-desc-text">
+          Shop-floor staff can inspect daily targets and CAD drawings. Supervisor login required to edit.
+        </p>
+        <button class="btn-role" id="toggle-role-btn">Unlock Supervisor Mode</button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Content -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="topbar">
+        <div>
+          <span class="crumb" id="breadcrumb">Workspace / Daily plan</span>
+          <h1 id="page-title">Every part. Every shift. In sync.</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="date-pill" id="live-date">Tue, 17 Nov 2026</div>
+          <div class="shift-pill">SHIFT A & B LIVE</div>
+        </div>
+      </header>
+
+      <!-- TAB 1: DAILY PLAN -->
+      <section id="tab-daily-plan" class="tab-panel active">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">PLANNED QUANTITY</span>
+            <div class="kpi-val" id="kpi-planned">0 pcs</div>
+            <span class="kpi-sub" id="kpi-orders">Across 0 part orders</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">COMPLETED (MADE)</span>
+            <div class="kpi-val emerald" id="kpi-made">0 pcs</div>
+            <span class="kpi-sub">Total produced today</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">BALANCE REMAINING</span>
+            <div class="kpi-val amber" id="kpi-balance">0 pcs</div>
+            <span class="kpi-sub">Remaining to hit daily target</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">DISPATCHED</span>
+            <div class="kpi-val" id="kpi-dispatched">0 pcs</div>
+            <span class="kpi-sub" id="kpi-ready">0 QC-cleared ready on floor</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Today's Production Plan (By Part Number)</h2>
+              <p class="muted">Real-time shift tracking, balance quantities, and expected completion time.</p>
+            </div>
+            <div class="filter-group">
+              <select id="shift-filter">
+                <option value="ALL">All Shifts</option>
+                <option value="Morning">Morning Shift</option>
+                <option value="Evening">Evening Shift</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>PART NUMBER / DESCRIPTION</th>
+                  <th>TARGET</th>
+                  <th>MADE</th>
+                  <th>BALANCE</th>
+                  <th>DISPATCHED</th>
+                  <th>SHIFT & IN-CHARGE</th>
+                  <th>STATUS & ETA</th>
+                  <th>DRAWING</th>
+                </tr>
+              </thead>
+              <tbody id="daily-plan-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: DRAWING LIBRARY & CONTROL PLAN -->
+      <section id="tab-drawing-library" class="tab-panel">
+        <div class="card supervisor-only" id="add-drawing-card" style="display:none;">
+          <h2>➕ Supervisor: Add New Part & CAD Drawing</h2>
+          <form id="add-part-form" class="grid-form">
+            <input type="text" name="part_number" placeholder="Part Number (e.g., F2FA461330)" required />
+            <input type="text" name="part_name" placeholder="Part Name (e.g., Fork Pipe K405)" required />
+            <input type="text" name="revision" placeholder="Revision (e.g., Rev XD)" required />
+            <input type="number" name="target_qty" placeholder="Daily Target (pcs)" required />
+            <select name="shift" required>
+              <option value="Morning Shift (08:00 - 17:00)">Morning Shift (08:00 - 17:00)</option>
+              <option value="Evening Shift (17:00 - 01:00)">Evening Shift (17:00 - 01:00)</option>
+            </select>
+            <input type="text" name="person_in_charge" placeholder="Person In-Charge" required />
+            <input type="text" name="eta_time" placeholder="Completion ETA (e.g., 16:30 Today)" required />
+            <input type="text" name="od_spec" placeholder="OD Spec (e.g., 29.0 +0.05 mm)" required />
+            <input type="text" name="id_spec" placeholder="ID Spec (e.g., 24.0 mm)" required />
+            <input type="text" name="length_spec" placeholder="Length Spec (e.g., 597.0 ± 0.2 mm)" required />
+            <input type="text" name="straightness_spec" placeholder="Straightness (e.g., 0.05 mm Max)" required />
+            <input type="text" name="surface_spec" placeholder="Surface Appearance" required />
+            <input type="text" name="bore_depth_spec" placeholder="Bore Depth (e.g., 46.1 +0.1 mm)" required />
+            <input type="text" name="threading_depth_spec" placeholder="Threading Depth (e.g., M26x1-6H, 27mm)" required />
+            <div class="file-input-wrap">
+              <label>Upload CAD Drawing (PDF / Image):</label>
+              <input type="file" name="drawingFile" accept=".pdf,.png,.jpg,.jpeg" />
+            </div>
+            <button type="submit" class="btn-primary">Save Part & Control Plan</button>
+          </form>
+        </div>
+
+        <div class="drawing-grid" id="drawing-cards-container"></div>
+
+        <!-- Drawing & Control Plan Detail Drawer/Modal -->
+        <div class="card detail-panel" id="drawing-detail-panel" style="display:none;">
+          <div class="card-header">
+            <div>
+              <span class="pill-emerald" id="det-rev">REV XD</span>
+              <h2 id="det-title">F2FA461330 — Fork Pipe</h2>
+            </div>
+            <button class="btn-secondary" onclick="closeDrawingDetail()">✕ Close</button>
+          </div>
+          <div class="detail-split">
+            <div class="cad-viewer">
+              <iframe id="det-pdf-frame" src="" title="CAD Drawing"></iframe>
+              <div class="cad-caption">
+                Official Engineering Control Drawing • <a id="det-download-link" href="#" target="_blank">Open Full Screen ↗</a>
+              </div>
+            </div>
+            <div class="control-plan-box">
+              <h3>Control Plan Critical Dimensions</h3>
+              <p class="muted">Operators must verify these parameters before and during machining:</p>
+              <table class="spec-table">
+                <tbody>
+                  <tr><th>Outer Diameter (OD)</th><td id="spec-od">-</td></tr>
+                  <tr><th>Inner Diameter (ID)</th><td id="spec-id">-</td></tr>
+                  <tr><th>Total Length</th><td id="spec-length">-</td></tr>
+                  <tr><th>Straightness</th><td id="spec-straight">-</td></tr>
+                  <tr><th>Surface Appearance</th><td id="spec-surface">-</td></tr>
+                  <tr><th>Bore Depth</th><td id="spec-bore">-</td></tr>
+                  <tr><th>Threading Depth</th><td id="spec-thread">-</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: PRODUCTION ENTRY (SUPERVISOR ONLY) -->
+      <section id="tab-production" class="tab-panel">
+        <div class="card" id="prod-locked-notice">
+          <h2>🔒 Supervisor Access Required</h2>
+          <p class="muted">Only an authorized Supervisor can record daily production quantities. Click <strong>Unlock Supervisor Mode</strong> in the bottom-left sidebar (Demo PIN: <code>1234</code>).</p>
+        </div>
+
+        <div class="card" id="prod-form-card" style="display:none;">
+          <h2>Log Finished Production Lot</h2>
+          <p class="muted">Finished pieces are automatically added to the Quality Check (QC) inspection queue.</p>
+          <form id="production-form" class="grid-form">
+            <div>
+              <label>Select Part Number</label>
+              <select name="part_number" id="prod-part-select" required></select>
+            </div>
+            <div>
+              <label>Finished Quantity (pcs)</label>
+              <input type="number" name="quantity" min="1" placeholder="e.g., 100" required />
+            </div>
+            <div>
+              <label>Shift</label>
+              <select name="shift">
+                <option value="Morning Shift">Morning Shift</option>
+                <option value="Evening Shift">Evening Shift</option>
+              </select>
+            </div>
+            <div>
+              <label>Operator / Person In-Charge</label>
+              <input type="text" name="person_in_charge" placeholder="e.g., Suresh Patel" required />
+            </div>
+            <div>
+              <label>Workstation / Machine</label>
+              <input type="text" name="workstation" placeholder="e.g., CNC Turning Line 01" required />
+            </div>
+            <div>
+              <label>Sample Recorded OD (mm)</label>
+              <input type="text" name="od_recorded" placeholder="e.g., 29.02 mm" required />
+            </div>
+            <div>
+              <label>Sample Recorded ID (mm)</label>
+              <input type="text" name="id_recorded" placeholder="e.g., 24.01 mm" required />
+            </div>
+            <div>
+              <label>Sample Recorded Length (mm)</label>
+              <input type="text" name="length_recorded" placeholder="e.g., 597.05 mm" required />
+            </div>
+            <button type="submit" class="btn-primary">Save Production Lot → Send to QC</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB 4: QUALITY CHECKS -->
+      <section id="tab-quality-checks" class="tab-panel">
+        <div class="card">
+          <h2>Quality Assurance Inspection Queue</h2>
+          <p class="muted">Every manufactured lot must pass dimensional verification against the Control Plan before dispatch.</p>
+          <div id="qc-lots-container" class="qc-list"></div>
+        </div>
+      </section>
+
+      <!-- TAB 5: DISPATCH & HANDOVER -->
+      <section id="tab-dispatch" class="tab-panel">
+        <div class="card" id="dispatch-form-card" style="display:none;">
+          <h2>Record Outbound Dispatch (QC-Cleared Stock Only)</h2>
+          <form id="dispatch-form" class="grid-form">
+            <div>
+              <label>Part Number (Showing QC-Cleared Ready Stock)</label>
+              <select name="part_number" id="dispatch-part-select" required></select>
+            </div>
+            <div>
+              <label>Dispatch Quantity (pcs)</label>
+              <input type="number" name="quantity" min="1" placeholder="e.g., 120" required />
+            </div>
+            <div>
+              <label>Handed Over By</label>
+              <input type="text" name="handed_over_by" placeholder="e.g., Suresh Patel" required />
+            </div>
+            <div>
+              <label>Customer / Loading Bay Destination</label>
+              <input type="text" name="destination" value="Endurance Suspension Division — Bay 1" required />
+            </div>
+            <button type="submit" class="btn-primary">Generate Delivery Note & Dispatch</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Today's Dispatch Register</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>DELIVERY NOTE</th>
+                  <th>PART NUMBER</th>
+                  <th>QUANTITY</th>
+                  <th>HANDED OVER BY</th>
+                  <th>DESTINATION</th>
+                  <th>TIME</th>
+                </tr>
+              </thead>
+              <tbody id="dispatch-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Supervisor PIN Modal -->
+  <div id="pin-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box">
+      <h3>Supervisor Authentication</h3>
+      <p class="muted">Enter Supervisor PIN to unlock production, QC, and drawing edits. (Demo PIN: <strong>1234</strong>)</p>
+      <input type="password" id="pin-input" placeholder="Enter PIN" maxlength="8" />
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closePinModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitPin()">Verify & Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
