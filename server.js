@@ -1,5 +1,5 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require('@libsql/client');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -26,19 +26,55 @@ const upload = multer({ storage });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialize SQLite Database
-const db = new sqlite3.Database(path.join(__dirname, 'krishna_automotive.db'));
+// Connect to Turso Cloud SQLite (on Render) or local file SQLite (on PC)
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL || 'file:krishna_automotive.db',
+  authToken: process.env.TURSO_AUTH_TOKEN
+});
 
-db.serialize(() => {
-  // 0. Settings Table (Stores Supervisor PIN)
-  db.run(`CREATE TABLE IF NOT EXISTS settings (
+// Lightweight SQLite-compatible wrapper around @libsql/client
+const db = {
+  run(sql, params = [], cb) {
+    if (typeof params === 'function') { cb = params; params = []; }
+    client.execute({ sql, args: params })
+      .then(res => {
+        if (cb) cb.call({ lastID: Number(res.lastInsertRowid || 0), changes: res.rowsAffected }, null);
+      })
+      .catch(err => {
+        if (cb) cb(err);
+      });
+  },
+  get(sql, params = [], cb) {
+    if (typeof params === 'function') { cb = params; params = []; }
+    client.execute({ sql, args: params })
+      .then(res => {
+        if (cb) cb(null, res.rows[0] || undefined);
+      })
+      .catch(err => {
+        if (cb) cb(err);
+      });
+  },
+  all(sql, params = [], cb) {
+    if (typeof params === 'function') { cb = params; params = []; }
+    client.execute({ sql, args: params })
+      .then(res => {
+        if (cb) cb(null, res.rows);
+      })
+      .catch(err => {
+        if (cb) cb(err);
+      });
+  }
+};
+
+// Initialize Cloud Database Tables & Seed Data
+async function initDatabase() {
+  await client.execute(`CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   )`);
-  db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('supervisor_pin', '1234')`);
+  await client.execute(`INSERT OR IGNORE INTO settings (key, value) VALUES ('supervisor_pin', '1234')`);
 
-  // 1. Parts & Drawings Table
-  db.run(`CREATE TABLE IF NOT EXISTS parts (
+  await client.execute(`CREATE TABLE IF NOT EXISTS parts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     part_number TEXT UNIQUE NOT NULL,
     part_name TEXT NOT NULL,
@@ -62,10 +98,7 @@ db.serialize(() => {
     updated_at TEXT
   )`);
 
-  db.run(`ALTER TABLE parts ADD COLUMN rejected_qty INTEGER DEFAULT 0`, () => {});
-
-  // 2. Production & QC Lots Table
-  db.run(`CREATE TABLE IF NOT EXISTS qc_lots (
+  await client.execute(`CREATE TABLE IF NOT EXISTS qc_lots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     part_number TEXT NOT NULL,
     revision TEXT NOT NULL,
@@ -81,8 +114,7 @@ db.serialize(() => {
     created_at TEXT
   )`);
 
-  // 3. Dispatch Register Table
-  db.run(`CREATE TABLE IF NOT EXISTS dispatches (
+  await client.execute(`CREATE TABLE IF NOT EXISTS dispatches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     dn_number TEXT NOT NULL,
     part_number TEXT NOT NULL,
@@ -92,8 +124,7 @@ db.serialize(() => {
     dispatched_at TEXT
   )`);
 
-  // 4. Shift / Daily Archive History Table
-  db.run(`CREATE TABLE IF NOT EXISTS shift_history (
+  await client.execute(`CREATE TABLE IF NOT EXISTS shift_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     archive_date TEXT NOT NULL,
     total_planned INTEGER NOT NULL,
@@ -104,74 +135,108 @@ db.serialize(() => {
     archived_by TEXT NOT NULL
   )`);
 
-  // Seed initial realistic data if empty
-  db.get('SELECT COUNT(*) AS count FROM parts', (err, row) => {
-    if (row && row.count === 0) {
-      const insertPart = db.prepare(`INSERT INTO parts (
+  const countRes = await client.execute('SELECT COUNT(*) AS count FROM parts');
+  const count = Number(countRes.rows[0].count || 0);
+
+  if (count === 0) {
+    await client.execute({
+      sql: `INSERT INTO parts (
         part_number, part_name, revision, target_qty, made_qty, qc_cleared_qty, rejected_qty, dispatched_qty,
         shift, person_in_charge, eta_time,
         od_spec, id_spec, length_spec, straightness_spec, surface_spec, bore_depth_spec, threading_depth_spec,
         drawing_file, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-
-      insertPart.run(
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         'F2FA461330', 'Fork Pipe (K405)', 'Rev XD', 1200, 960, 840, 15, 600,
         'Morning Shift (08:00 - 17:00)', 'Suresh Patel', '16:30 Today',
         '29.0 +0.05 / 0 mm', '24.0 mm (Bore 25 +0.12/+0.08)', '597.0 ± 0.2 mm',
         '0.05 mm Max', 'No burr, rust, dents or scratches', '46.1 +0.1 / 0 mm', 'M26x1-6H (Depth 27 mm)',
         'F2FA461330.pdf', '17 Nov 2026'
-      );
+      ]
+    });
 
-      insertPart.run(
+    await client.execute({
+      sql: `INSERT INTO parts (
+        part_number, part_name, revision, target_qty, made_qty, qc_cleared_qty, rejected_qty, dispatched_qty,
+        shift, person_in_charge, eta_time,
+        od_spec, id_spec, length_spec, straightness_spec, surface_spec, bore_depth_spec, threading_depth_spec,
+        drawing_file, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         'F2FA070330', 'Fork Pipe Machined (B104E)', 'Rev XB', 1000, 780, 720, 10, 500,
         'Morning Shift (08:00 - 17:00)', 'Amit Sharma', '16:45 Today',
         '28.5 mm / 26.05 +0.05 mm', '25.0 +0.12/+0.08 mm', '524.3 ± 0.2 mm',
         '0.05 mm Max', 'No dent/scratch marks after plating', '46.1 +0.1 / 0 mm', 'M26x1-6H (Depth 30 mm)',
         'F2FA070330.pdf', '17 Nov 2026'
-      );
+      ]
+    });
 
-      insertPart.run(
+    await client.execute({
+      sql: `INSERT INTO parts (
+        part_number, part_name, revision, target_qty, made_qty, qc_cleared_qty, rejected_qty, dispatched_qty,
+        shift, person_in_charge, eta_time,
+        od_spec, id_spec, length_spec, straightness_spec, surface_spec, bore_depth_spec, threading_depth_spec,
+        drawing_file, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         'F2FA449330', 'Fork Inner Tube Assembly', 'Rev XA', 800, 640, 600, 8, 450,
         'Evening Shift (17:00 - 01:00)', 'Vikram Singh', '23:30 Today',
         '30.0 ± 0.1 mm', '24.5 ± 0.08 mm', '580.0 ± 0.2 mm',
         '0.04 mm Max', 'Chrome finish Ra 0.2 max', '44.0 ± 0.1 mm', 'M26x1-6H (Depth 26 mm)',
         'F2FA461330.pdf', '16 Nov 2026'
-      );
+      ]
+    });
 
-      insertPart.run(
+    await client.execute({
+      sql: `INSERT INTO parts (
+        part_number, part_name, revision, target_qty, made_qty, qc_cleared_qty, rejected_qty, dispatched_qty,
+        shift, person_in_charge, eta_time,
+        od_spec, id_spec, length_spec, straightness_spec, surface_spec, bore_depth_spec, threading_depth_spec,
+        drawing_file, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         'F2FA445330', 'Suspension Damper Rod', 'Rev XC', 600, 300, 260, 12, 200,
         'Evening Shift (17:00 - 01:00)', 'Manoj Yadav', '00:30 Tomorrow',
         '26.3 +0.1 / 0 mm', '20.0 ± 0.05 mm', '495.0 ± 0.15 mm',
         '0.05 mm Max', 'Free from burrs at ID & OD', '38.5 ± 0.1 mm', 'M22x1-6H (Depth 22 mm)',
         'F2FA070330.pdf', '15 Nov 2026'
-      );
+      ]
+    });
 
-      insertPart.finalize();
-
-      const insertLot = db.prepare(`INSERT INTO qc_lots (
+    await client.execute({
+      sql: `INSERT INTO qc_lots (
         part_number, revision, quantity, shift, person_in_charge, workstation,
         od_recorded, id_recorded, length_recorded, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Awaiting QC', ?)`,
+      args: ['F2FA461330', 'Rev XD', 120, 'Morning Shift', 'Suresh Patel', 'CNC Line 01', '29.02 mm', '24.01 mm', '597.05 mm', '14:20 Today']
+    });
 
-      insertLot.run('F2FA461330', 'Rev XD', 120, 'Morning Shift', 'Suresh Patel', 'CNC Line 01', '29.02 mm', '24.01 mm', '597.05 mm', 'Awaiting QC', '14:20 Today');
-      insertLot.run('F2FA070330', 'Rev XB', 60, 'Morning Shift', 'Amit Sharma', 'CNC Line 02', '28.51 mm', '25.04 mm', '524.25 mm', 'Awaiting QC', '14:45 Today');
-      insertLot.finalize();
+    await client.execute({
+      sql: `INSERT INTO qc_lots (
+        part_number, revision, quantity, shift, person_in_charge, workstation,
+        od_recorded, id_recorded, length_recorded, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Awaiting QC', ?)`,
+      args: ['F2FA070330', 'Rev XB', 60, 'Morning Shift', 'Amit Sharma', 'CNC Line 02', '28.51 mm', '25.04 mm', '524.25 mm', '14:45 Today']
+    });
 
-      const insertDispatch = db.prepare(`INSERT INTO dispatches (
-        dn_number, part_number, quantity, handed_over_by, destination, dispatched_at
-      ) VALUES (?, ?, ?, ?, ?, ?)`);
+    await client.execute({
+      sql: `INSERT INTO dispatches (dn_number, part_number, quantity, handed_over_by, destination, dispatched_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: ['DN-060', 'F2FA461330', 600, 'Suresh Patel', 'Endurance Suspension Bay 1', '13:30 Today']
+    });
 
-      insertDispatch.run('DN-060', 'F2FA461330', 600, 'Suresh Patel', 'Endurance Suspension Bay 1', '13:30 Today');
-      insertDispatch.run('DN-059', 'F2FA070330', 500, 'Amit Sharma', 'Endurance Suspension Bay 2', '12:15 Today');
-      insertDispatch.finalize();
+    await client.execute({
+      sql: `INSERT INTO dispatches (dn_number, part_number, quantity, handed_over_by, destination, dispatched_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: ['DN-059', 'F2FA070330', 500, 'Amit Sharma', 'Endurance Suspension Bay 2', '12:15 Today']
+    });
 
-      db.run(
-        `INSERT INTO shift_history (archive_date, total_planned, total_made, total_qc_cleared, total_rejected, total_dispatched, archived_by)
-         VALUES ('16 Nov 2026', 3600, 3480, 3410, 42, 3300, 'Rajesh Singh (Supervisor)')`
-      );
-    }
-  });
-});
+    await client.execute(
+      `INSERT INTO shift_history (archive_date, total_planned, total_made, total_qc_cleared, total_rejected, total_dispatched, archived_by)
+       VALUES ('16 Nov 2026', 3600, 3480, 3410, 42, 3300, 'Rajesh Singh (Supervisor)')`
+    );
+  }
+}
 
 // Middleware to verify Supervisor PIN from DB
 function requireSupervisor(req, res, next) {
@@ -261,10 +326,9 @@ app.post('/api/parts', requireSupervisor, upload.single('drawingFile'), (req, re
   );
 });
 
-// Supervisor: Edit Part Target, Shift, In-Charge, or ETA
 app.put('/api/parts/:id', requireSupervisor, (req, res) => {
   const { part_name, revision, target_qty, shift, person_in_charge, eta_time } = req.body;
-  const partId = req.params.id;
+  const partId = Number(req.params.id);
 
   db.run(
     `UPDATE parts
@@ -279,9 +343,8 @@ app.put('/api/parts/:id', requireSupervisor, (req, res) => {
   );
 });
 
-// Supervisor: Delete Part from Daily Plan
 app.delete('/api/parts/:id', requireSupervisor, (req, res) => {
-  const partId = req.params.id;
+  const partId = Number(req.params.id);
 
   db.get('SELECT part_number FROM parts WHERE id = ?', [partId], (err, part) => {
     if (err || !part) return res.status(404).json({ error: 'Part not found' });
@@ -323,12 +386,12 @@ app.post('/api/production', requireSupervisor, (req, res) => {
 
 app.post('/api/qc/:id', requireSupervisor, (req, res) => {
   const { decision, inspector } = req.body;
-  const lotId = req.params.id;
+  const lotId = Number(req.params.id);
 
   db.get('SELECT * FROM qc_lots WHERE id = ?', [lotId], (err, lot) => {
     if (err || !lot) return res.status(404).json({ error: 'QC Lot not found' });
 
-    db.run('UPDATE qc_lots SET status = ?, inspector = ? WHERE id = ?', [decision, inspector || 'QC Supervisor', lotId], (err2) => {
+    db.run('UPDATE qc_lots SET status = ?, inspector = ? WHERE id = ?', [decision, inspector || 'Rajesh Singh (Supervisor)', lotId], (err2) => {
       if (err2) return res.status(500).json({ error: err2.message });
 
       if (decision === 'Passed') {
@@ -408,6 +471,13 @@ app.post('/api/archive-day', requireSupervisor, (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Krishna Automotives Daily Plan running at http://localhost:${PORT}`);
-});
+initDatabase()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Krishna Automotives Daily Plan running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });
