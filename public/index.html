@@ -1,44 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Krishna Automotives — Daily Plan</title>
+  <title>Krishna Automotives — Daily Plan OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <div class="app-shell">
-    <!-- Left Sidebar (Matches Floorline Figma Layout) -->
+    <!-- Left Sidebar -->
     <aside class="sidebar">
-      <div class="brand-box">
-        <div class="brand-logo">KA</div>
-        <div>
-          <div class="brand-title">KRISHNA AUTOMOTIVES</div>
-          <div class="brand-sub">DAILY PLAN OS • UNIT 01</div>
+      <div>
+        <div class="brand-box">
+          <div class="brand-logo">KA</div>
+          <div>
+            <div class="brand-title">KRISHNA AUTOMOTIVES</div>
+            <div class="brand-sub">DAILY PLAN OS • UNIT 01</div>
+          </div>
         </div>
-      </div>
 
-      <div class="nav-label">WORKSPACE</div>
-      <nav class="nav-menu">
-        <button class="nav-item active" data-tab="daily-plan">
-          <span>📋 Daily Plan</span>
-        </button>
-        <button class="nav-item" data-tab="drawing-library">
-          <span>📐 Drawing Library</span>
-        </button>
-        <button class="nav-item" data-tab="production">
-          <span>⚙️ Production Entry</span>
-          <span class="sup-tag">SUP</span>
-        </button>
-        <button class="nav-item" data-tab="quality-checks">
-          <span>✅ Quality Checks</span>
-          <span class="badge" id="qc-badge">0</span>
-        </button>
-        <button class="nav-item" data-tab="dispatch">
-          <span>🚚 Dispatch & Handover</span>
-          <span class="sup-tag">SUP</span>
-        </button>
-      </nav>
+        <div class="nav-label">WORKSPACE</div>
+        <nav class="nav-menu">
+          <button class="nav-item active" data-tab="daily-plan">
+            <span class="nav-text"><span class="nav-icon">📋</span> Daily Plan</span>
+          </button>
+          <button class="nav-item" data-tab="drawing-library">
+            <span class="nav-text"><span class="nav-icon">📐</span> Drawing Library</span>
+          </button>
+          <button class="nav-item" data-tab="production">
+            <span class="nav-text"><span class="nav-icon">⚙️</span> Production Entry</span>
+            <span class="sup-tag">SUP</span>
+          </button>
+          <button class="nav-item" data-tab="quality-checks">
+            <span class="nav-text"><span class="nav-icon">✅</span> Quality Checks</span>
+            <span class="badge" id="qc-badge">0</span>
+          </button>
+          <button class="nav-item" data-tab="dispatch">
+            <span class="nav-text"><span class="nav-icon">🚚</span> Dispatch & Handover</span>
+            <span class="sup-tag">SUP</span>
+          </button>
+        </nav>
+      </div>
 
       <!-- Role Switcher Card -->
       <div class="role-card">
@@ -47,6 +54,8 @@
           Shop-floor staff can inspect daily targets and CAD drawings. Supervisor login required to edit.
         </p>
         <button class="btn-role" id="toggle-role-btn">Unlock Supervisor Mode</button>
+        <button class="btn-secondary" id="open-change-pin-btn" style="width:100%; margin-top:8px; display:none;"
+          onclick="openChangePinModal()">🔑 Change Supervisor PIN</button>
       </div>
     </aside>
 
@@ -60,47 +69,63 @@
         </div>
         <div class="topbar-right">
           <div class="date-pill" id="live-date">Tue, 17 Nov 2026</div>
-          <div class="shift-pill">SHIFT A & B LIVE</div>
+          <div class="shift-pill"><span class="live-dot"></span> SHIFT A & B LIVE</div>
         </div>
       </header>
 
       <!-- TAB 1: DAILY PLAN -->
       <section id="tab-daily-plan" class="tab-panel active">
         <div class="kpi-grid">
-          <div class="kpi-card">
-            <span class="kpi-label">PLANNED QUANTITY</span>
+          <div class="kpi-card accent-slate">
+            <div class="kpi-top">
+              <span class="kpi-label">PLANNED QUANTITY</span>
+              <span class="kpi-icon">🎯</span>
+            </div>
             <div class="kpi-val" id="kpi-planned">0 pcs</div>
             <span class="kpi-sub" id="kpi-orders">Across 0 part orders</span>
           </div>
-          <div class="kpi-card">
-            <span class="kpi-label">COMPLETED (MADE)</span>
+          <div class="kpi-card accent-emerald">
+            <div class="kpi-top">
+              <span class="kpi-label">COMPLETED (MADE)</span>
+              <span class="kpi-icon">⚡</span>
+            </div>
             <div class="kpi-val emerald" id="kpi-made">0 pcs</div>
             <span class="kpi-sub">Total produced today</span>
           </div>
-          <div class="kpi-card">
-            <span class="kpi-label">BALANCE REMAINING</span>
+          <div class="kpi-card accent-amber">
+            <div class="kpi-top">
+              <span class="kpi-label">BALANCE REMAINING</span>
+              <span class="kpi-icon">⏳</span>
+            </div>
             <div class="kpi-val amber" id="kpi-balance">0 pcs</div>
             <span class="kpi-sub">Remaining to hit daily target</span>
           </div>
-          <div class="kpi-card">
-            <span class="kpi-label">DISPATCHED</span>
-            <div class="kpi-val" id="kpi-dispatched">0 pcs</div>
+          <div class="kpi-card accent-blue">
+            <div class="kpi-top">
+              <span class="kpi-label">DISPATCHED</span>
+              <span class="kpi-icon">🚚</span>
+            </div>
+            <div class="kpi-val blue" id="kpi-dispatched">0 pcs</div>
             <span class="kpi-sub" id="kpi-ready">0 QC-cleared ready on floor</span>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-header">
+          <div class="card-header wrap-header">
             <div>
               <h2>Today's Production Plan (By Part Number)</h2>
-              <p class="muted">Real-time shift tracking, balance quantities, and expected completion time.</p>
+              <p class="muted">Real-time shift tracking, completion progress, and expected delivery time.</p>
             </div>
-            <div class="filter-group">
+            <div class="toolbar-actions">
+              <input type="text" id="plan-search" class="search-input" placeholder="🔍 Search part no..." />
               <select id="shift-filter">
                 <option value="ALL">All Shifts</option>
                 <option value="Morning">Morning Shift</option>
                 <option value="Evening">Evening Shift</option>
               </select>
+              <button class="btn-secondary" onclick="exportPlanCSV()">📥 Export Excel (.CSV)</button>
+              <button class="btn-danger supervisor-only" id="archive-day-btn" style="display:none;"
+                onclick="archiveCurrentDay()">🔄 Archive Day & Reset</button>
             </div>
           </div>
 
@@ -110,15 +135,42 @@
                 <tr>
                   <th>PART NUMBER / DESCRIPTION</th>
                   <th>TARGET</th>
-                  <th>MADE</th>
+                  <th>MADE & PROGRESS</th>
                   <th>BALANCE</th>
                   <th>DISPATCHED</th>
                   <th>SHIFT & IN-CHARGE</th>
                   <th>STATUS & ETA</th>
                   <th>DRAWING</th>
+                  <th class="sup-col" style="display:none;">ACTIONS</th>
                 </tr>
               </thead>
               <tbody id="daily-plan-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Shift Archive History Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Previous Shift & Daily Archive Log</h2>
+              <p class="muted">Historical record of archived daily production runs.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ARCHIVE DATE</th>
+                  <th>PLANNED</th>
+                  <th>MADE</th>
+                  <th>QC CLEARED</th>
+                  <th>REJECTED</th>
+                  <th>DISPATCHED</th>
+                  <th>ARCHIVED BY</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -145,7 +197,8 @@
             <input type="text" name="straightness_spec" placeholder="Straightness (e.g., 0.05 mm Max)" required />
             <input type="text" name="surface_spec" placeholder="Surface Appearance" required />
             <input type="text" name="bore_depth_spec" placeholder="Bore Depth (e.g., 46.1 +0.1 mm)" required />
-            <input type="text" name="threading_depth_spec" placeholder="Threading Depth (e.g., M26x1-6H, 27mm)" required />
+            <input type="text" name="threading_depth_spec" placeholder="Threading Depth (e.g., M26x1-6H, 27mm)"
+              required />
             <div class="file-input-wrap">
               <label>Upload CAD Drawing (PDF / Image):</label>
               <input type="file" name="drawingFile" accept=".pdf,.png,.jpg,.jpeg" />
@@ -154,14 +207,19 @@
           </form>
         </div>
 
+        <div class="card-header" style="margin-bottom:16px;">
+          <h2>Approved Engineering Drawing Catalogue</h2>
+          <input type="text" id="drawing-search" class="search-input" placeholder="🔍 Search part number or name..." />
+        </div>
+
         <div class="drawing-grid" id="drawing-cards-container"></div>
 
-        <!-- Drawing & Control Plan Detail Drawer/Modal -->
+        <!-- Drawing & Control Plan Detail Drawer -->
         <div class="card detail-panel" id="drawing-detail-panel" style="display:none;">
           <div class="card-header">
             <div>
               <span class="pill-emerald" id="det-rev">REV XD</span>
-              <h2 id="det-title">F2FA461330 — Fork Pipe</h2>
+              <h2 id="det-title" style="margin-top:6px;">F2FA461330 — Fork Pipe</h2>
             </div>
             <button class="btn-secondary" onclick="closeDrawingDetail()">✕ Close</button>
           </div>
@@ -169,21 +227,51 @@
             <div class="cad-viewer">
               <iframe id="det-pdf-frame" src="" title="CAD Drawing"></iframe>
               <div class="cad-caption">
-                Official Engineering Control Drawing • <a id="det-download-link" href="#" target="_blank">Open Full Screen ↗</a>
+                <span>Official Engineering Control Drawing</span>
+                <a id="det-download-link" href="#" target="_blank">Open Full Screen PDF ↗</a>
               </div>
             </div>
             <div class="control-plan-box">
+              <div class="qr-banner">
+                <img id="det-qr-img" src="" alt="Part QR Code" width="76" height="76" />
+                <div>
+                  <strong>Shop-Floor QR Tag</strong>
+                  <p class="muted">Scan at CNC workstation to open this exact part's Control Plan on mobile.</p>
+                </div>
+              </div>
+
               <h3>Control Plan Critical Dimensions</h3>
               <p class="muted">Operators must verify these parameters before and during machining:</p>
               <table class="spec-table">
                 <tbody>
-                  <tr><th>Outer Diameter (OD)</th><td id="spec-od">-</td></tr>
-                  <tr><th>Inner Diameter (ID)</th><td id="spec-id">-</td></tr>
-                  <tr><th>Total Length</th><td id="spec-length">-</td></tr>
-                  <tr><th>Straightness</th><td id="spec-straight">-</td></tr>
-                  <tr><th>Surface Appearance</th><td id="spec-surface">-</td></tr>
-                  <tr><th>Bore Depth</th><td id="spec-bore">-</td></tr>
-                  <tr><th>Threading Depth</th><td id="spec-thread">-</td></tr>
+                  <tr>
+                    <th>Outer Diameter (OD)</th>
+                    <td id="spec-od">-</td>
+                  </tr>
+                  <tr>
+                    <th>Inner Diameter (ID)</th>
+                    <td id="spec-id">-</td>
+                  </tr>
+                  <tr>
+                    <th>Total Length</th>
+                    <td id="spec-length">-</td>
+                  </tr>
+                  <tr>
+                    <th>Straightness</th>
+                    <td id="spec-straight">-</td>
+                  </tr>
+                  <tr>
+                    <th>Surface Appearance</th>
+                    <td id="spec-surface">-</td>
+                  </tr>
+                  <tr>
+                    <th>Bore Depth</th>
+                    <td id="spec-bore">-</td>
+                  </tr>
+                  <tr>
+                    <th>Threading Depth</th>
+                    <td id="spec-thread">-</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -193,9 +281,10 @@
 
       <!-- TAB 3: PRODUCTION ENTRY (SUPERVISOR ONLY) -->
       <section id="tab-production" class="tab-panel">
-        <div class="card" id="prod-locked-notice">
+        <div class="card locked-banner" id="prod-locked-notice">
           <h2>🔒 Supervisor Access Required</h2>
-          <p class="muted">Only an authorized Supervisor can record daily production quantities. Click <strong>Unlock Supervisor Mode</strong> in the bottom-left sidebar (Demo PIN: <code>1234</code>).</p>
+          <p class="muted">Only an authorized Supervisor can record daily production quantities. Click <strong>Unlock
+              Supervisor Mode</strong> in the sidebar.</p>
         </div>
 
         <div class="card" id="prod-form-card" style="display:none;">
@@ -244,9 +333,37 @@
 
       <!-- TAB 4: QUALITY CHECKS -->
       <section id="tab-quality-checks" class="tab-panel">
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="kpi-card accent-emerald">
+            <div class="kpi-top">
+              <span class="kpi-label">QC CLEARED TODAY</span>
+              <span class="kpi-icon">✅</span>
+            </div>
+            <div class="kpi-val emerald" id="qc-kpi-cleared">0 pcs</div>
+            <span class="kpi-sub">Approved & ready for dispatch</span>
+          </div>
+          <div class="kpi-card accent-red">
+            <div class="kpi-top">
+              <span class="kpi-label">REJECTED / REWORK</span>
+              <span class="kpi-icon">⚠️</span>
+            </div>
+            <div class="kpi-val red" id="qc-kpi-rejected">0 pcs</div>
+            <span class="kpi-sub">Failed dimensional tolerance</span>
+          </div>
+          <div class="kpi-card accent-amber">
+            <div class="kpi-top">
+              <span class="kpi-label">SHOP-FLOOR REJECTION RATE</span>
+              <span class="kpi-icon">📊</span>
+            </div>
+            <div class="kpi-val amber" id="qc-kpi-rate">0.0%</div>
+            <span class="kpi-sub">Target threshold: &lt; 2.5%</span>
+          </div>
+        </div>
+
         <div class="card">
           <h2>Quality Assurance Inspection Queue</h2>
-          <p class="muted">Every manufactured lot must pass dimensional verification against the Control Plan before dispatch.</p>
+          <p class="muted">Every manufactured lot must pass dimensional verification against the Control Plan before
+            dispatch.</p>
           <div id="qc-lots-container" class="qc-list"></div>
         </div>
       </section>
@@ -278,6 +395,8 @@
 
         <div class="card">
           <h2>Today's Dispatch Register</h2>
+          <p class="muted">Click <strong>Print Gate Pass</strong> on any entry to generate an official Delivery Challan.
+          </p>
           <div class="table-wrap">
             <table>
               <thead>
@@ -288,6 +407,7 @@
                   <th>HANDED OVER BY</th>
                   <th>DESTINATION</th>
                   <th>TIME</th>
+                  <th>GATE PASS</th>
                 </tr>
               </thead>
               <tbody id="dispatch-tbody"></tbody>
@@ -302,7 +422,7 @@
   <div id="pin-modal" class="modal-backdrop" style="display:none;">
     <div class="modal-box">
       <h3>Supervisor Authentication</h3>
-      <p class="muted">Enter Supervisor PIN to unlock production, QC, and drawing edits. (Demo PIN: <strong>1234</strong>)</p>
+      <p class="muted">Enter Supervisor PIN to unlock production, QC, and drawing edits.</p>
       <input type="password" id="pin-input" placeholder="Enter PIN" maxlength="8" />
       <div class="modal-actions">
         <button class="btn-secondary" onclick="closePinModal()">Cancel</button>
@@ -311,6 +431,50 @@
     </div>
   </div>
 
+  <!-- Change Supervisor PIN Modal -->
+  <div id="change-pin-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box">
+      <h3>🔑 Change Supervisor PIN</h3>
+      <p class="muted">Set a new PIN (minimum 4 characters) for supervisor access.</p>
+      <input type="password" id="old-pin-input" placeholder="Current PIN" maxlength="12" />
+      <input type="password" id="new-pin-input" placeholder="New PIN" maxlength="12" style="margin-top:0;" />
+      <input type="password" id="confirm-pin-input" placeholder="Confirm New PIN" maxlength="12" style="margin-top:0;" />
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeChangePinModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitChangePin()">Update PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Part Modal (Supervisor) -->
+  <div id="edit-part-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="width:420px;">
+      <h3>✏️ Edit Part Order</h3>
+      <p class="muted" id="edit-part-subtitle" style="margin-bottom:10px;">Update daily target, shift, or lead.</p>
+      <input type="hidden" id="edit-part-id" />
+      <label class="field-label">Part Description</label>
+      <input type="text" id="edit-part-name" style="margin:4px 0 10px;" />
+      <label class="field-label">Revision</label>
+      <input type="text" id="edit-part-rev" style="margin:4px 0 10px;" />
+      <label class="field-label">Daily Target (pcs)</label>
+      <input type="number" id="edit-part-target" min="1" style="margin:4px 0 10px;" />
+      <label class="field-label">Shift</label>
+      <select id="edit-part-shift" style="margin:4px 0 10px;">
+        <option value="Morning Shift (08:00 - 17:00)">Morning Shift (08:00 - 17:00)</option>
+        <option value="Evening Shift (17:00 - 01:00)">Evening Shift (17:00 - 01:00)</option>
+      </select>
+      <label class="field-label">Person In-Charge</label>
+      <input type="text" id="edit-part-lead" style="margin:4px 0 10px;" />
+      <label class="field-label">Completion ETA</label>
+      <input type="text" id="edit-part-eta" style="margin:4px 0 14px;" />
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeEditPartModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitEditPart()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
+
 </html>
