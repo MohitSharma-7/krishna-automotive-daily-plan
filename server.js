@@ -384,26 +384,54 @@ app.post('/api/production', requireSupervisor, (req, res) => {
   });
 });
 
+// QC Inspection: Full Pass, Full Reject, or Partial Split (Passed + Rejected)
 app.post('/api/qc/:id', requireSupervisor, (req, res) => {
-  const { decision, inspector } = req.body;
+  const { decision, inspector, passed_qty } = req.body;
   const lotId = Number(req.params.id);
 
   db.get('SELECT * FROM qc_lots WHERE id = ?', [lotId], (err, lot) => {
     if (err || !lot) return res.status(404).json({ error: 'QC Lot not found' });
 
-    db.run('UPDATE qc_lots SET status = ?, inspector = ? WHERE id = ?', [decision, inspector || 'Rajesh Singh (Supervisor)', lotId], (err2) => {
-      if (err2) return res.status(500).json({ error: err2.message });
+    const totalQty = Number(lot.quantity);
+    let passCount = 0;
+    let rejectCount = 0;
+    let statusLabel = decision;
 
-      if (decision === 'Passed') {
-        db.run('UPDATE parts SET qc_cleared_qty = qc_cleared_qty + ? WHERE part_number = ?', [lot.quantity, lot.part_number]);
-      } else if (decision === 'Rejected') {
+    if (decision === 'Passed') {
+      passCount = totalQty;
+    } else if (decision === 'Rejected') {
+      rejectCount = totalQty;
+    } else if (decision === 'Partial') {
+      passCount = Number(passed_qty);
+      if (!Number.isInteger(passCount) || passCount < 0 || passCount > totalQty) {
+        return res.status(400).json({ error: `Passed quantity must be between 0 and ${totalQty}.` });
+      }
+      rejectCount = totalQty - passCount;
+      statusLabel = `Partial (${passCount} Passed / ${rejectCount} Rejected)`;
+    } else {
+      return res.status(400).json({ error: 'Invalid QC decision.' });
+    }
+
+    db.run(
+      'UPDATE qc_lots SET status = ?, inspector = ? WHERE id = ?',
+      [statusLabel, inspector || 'Rajesh Singh (Supervisor)', lotId],
+      (err2) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+
         db.run(
-          'UPDATE parts SET made_qty = MAX(0, made_qty - ?), rejected_qty = COALESCE(rejected_qty, 0) + ? WHERE part_number = ?',
-          [lot.quantity, lot.quantity, lot.part_number]
+          `UPDATE parts
+           SET qc_cleared_qty = qc_cleared_qty + ?,
+               rejected_qty = COALESCE(rejected_qty, 0) + ?,
+               made_qty = MAX(0, made_qty - ?)
+           WHERE part_number = ?`,
+          [passCount, rejectCount, rejectCount, lot.part_number],
+          (err3) => {
+            if (err3) return res.status(500).json({ error: err3.message });
+            res.json({ success: true });
+          }
         );
       }
-      res.json({ success: true });
-    });
+    );
   });
 });
 

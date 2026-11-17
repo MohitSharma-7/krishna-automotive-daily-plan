@@ -361,26 +361,81 @@ function renderQCLots() {
         <div class="muted">Lead: ${l.person_in_charge} • ${l.shift} • Workstation: ${l.workstation || 'Line 1'} (${l.created_at})</div>
         <div class="muted" style="margin-top:4px;">Recorded Specs → OD: <strong>${l.od_recorded}</strong> | ID: <strong>${l.id_recorded}</strong> | Length: <strong>${l.length_recorded}</strong></div>
       </div>
-      <div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
         ${l.status === 'Awaiting QC'
           ? (isSup
-              ? `<button class="btn-primary" onclick="decideQC(${l.id}, 'Passed')">✓ Approve Lot</button>
-                 <button class="btn-danger" onclick="decideQC(${l.id}, 'Rejected')">✕ Reject</button>`
+              ? `<button class="btn-primary" onclick="decideQC(${l.id}, 'Passed')">✓ Approve All</button>
+                 <button class="btn-secondary" onclick="openPartialQCModal(${l.id})">⚖️ Partial Split</button>
+                 <button class="btn-danger" onclick="decideQC(${l.id}, 'Rejected')">✕ Reject All</button>`
               : `<span class="pill-amber">Awaiting Supervisor QC</span>`)
-          : `<span class="${l.status === 'Passed' ? 'pill-emerald' : 'pill-amber'}">${l.status} (${l.inspector})</span>`
+          : `<span class="${l.status === 'Passed' ? 'pill-emerald' : 'pill-amber'}">${l.status} • ${l.inspector}</span>`
         }
       </div>
     </div>
   `).join('');
 }
 
-async function decideQC(id, decision) {
+async function decideQC(id, decision, passedQty = null) {
+  const payload = { decision, inspector: 'Rajesh Singh (Supervisor)' };
+  if (decision === 'Partial') {
+    payload.passed_qty = passedQty;
+  }
+
   const res = await fetch(`/api/qc/${id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-supervisor-pin': supervisorPin },
-    body: JSON.stringify({ decision, inspector: 'Rajesh Singh (Supervisor)' })
+    body: JSON.stringify(payload)
   });
-  if (res.ok) loadDashboard();
+
+  if (res.ok) {
+    closePartialQCModal();
+    loadDashboard();
+  } else {
+    const err = await res.json();
+    alert(err.error || 'Failed to update QC status.');
+  }
+}
+
+// Partial QC Split Modal Controls
+function openPartialQCModal(lotId) {
+  const lot = state.lots.find(l => l.id === lotId);
+  if (!lot) return;
+
+  document.getElementById('partial-qc-id').value = lot.id;
+  document.getElementById('partial-qc-total').value = lot.quantity;
+  document.getElementById('partial-qc-subtitle').textContent = `Lot: ${lot.part_number} • Total Inspected: ${lot.quantity} pcs`;
+
+  const passInput = document.getElementById('partial-passed-input');
+  passInput.max = lot.quantity;
+  passInput.value = lot.quantity;
+  updatePartialRejectPreview();
+
+  document.getElementById('partial-qc-modal').style.display = 'grid';
+  passInput.focus();
+  passInput.select();
+}
+
+function closePartialQCModal() {
+  document.getElementById('partial-qc-modal').style.display = 'none';
+}
+
+function updatePartialRejectPreview() {
+  const total = Number(document.getElementById('partial-qc-total').value || 0);
+  const passed = Number(document.getElementById('partial-passed-input').value || 0);
+  const rejected = Math.max(0, total - passed);
+  document.getElementById('partial-rejected-preview').value = rejected;
+}
+
+function submitPartialQC() {
+  const lotId = Number(document.getElementById('partial-qc-id').value);
+  const total = Number(document.getElementById('partial-qc-total').value);
+  const passed = Number(document.getElementById('partial-passed-input').value);
+
+  if (!Number.isInteger(passed) || passed < 0 || passed > total) {
+    return alert(`Please enter a valid number between 0 and ${total}.`);
+  }
+
+  decideQC(lotId, 'Partial', passed);
 }
 
 function renderDispatches() {
@@ -545,6 +600,9 @@ document.getElementById('add-part-form').addEventListener('submit', async (e) =>
     e.target.reset();
     alert('New Part & Control Plan added!');
     loadDashboard();
+  } else {
+    const err = await res.json();
+    alert(err.error || 'Failed to add part.');
   }
 });
 
@@ -561,6 +619,9 @@ document.getElementById('production-form').addEventListener('submit', async (e) 
     alert('Production entry saved and sent to Quality Check queue!');
     loadDashboard();
     document.querySelector('[data-tab="quality-checks"]').click();
+  } else {
+    const err = await res.json();
+    alert(err.error || 'Failed to save production lot.');
   }
 });
 
